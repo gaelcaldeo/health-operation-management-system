@@ -72,21 +72,7 @@ export default async function PatientsPage({
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, role")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) {
-    redirect("/login");
-  }
-
-  const canManagePatients = ["admin", "healthcare_staff"].includes(
-    profile.role
-  );
-
-  let query = supabase
+    let query = supabase
     .from("patients")
     .select(
       "id, patient_number, first_name, last_name, date_of_birth, gender, phone, status"
@@ -104,7 +90,25 @@ export default async function PatientsPage({
     query = query.eq("status", statusFilter);
   }
 
-  const { data: patients, error } = await query;
+  const [
+    { data: profile },
+    { data: patients, error },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, role")
+      .eq("id", user.id)
+      .single(),
+    query,
+  ]);
+
+  if (!profile) {
+    redirect("/login");
+  }
+
+  const canManagePatients = ["admin", "healthcare_staff"].includes(
+    profile.role
+  );
 
   const hasFilters = Boolean(search) || statusFilter !== "all";
 
